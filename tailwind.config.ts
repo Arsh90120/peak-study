@@ -43,7 +43,6 @@ const config: Config = {
         border: 'var(--border)',
         input: 'var(--input)',
         ring: 'var(--ring)',
-        // legacy PEAK aliases
         surface: 'var(--surface)',
         'text-primary': 'var(--text-primary)',
         'text-muted': 'var(--text-muted)',
@@ -51,8 +50,8 @@ const config: Config = {
         'accent-hover': 'var(--accent-hover)',
       },
       fontFamily: {
-        sans: ['Geist', 'system-ui', 'sans-serif'],
-        mono: ['Geist Mono', 'monospace'],
+        sans: ['Instrument Sans', 'system-ui', 'sans-serif'],
+        mono: ['ui-monospace', 'monospace'],
       },
       borderRadius: {
         lg: 'var(--radius)',
