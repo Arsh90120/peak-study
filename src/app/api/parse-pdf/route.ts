@@ -1,7 +1,9 @@
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30
 
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
+import pdfParse from 'pdf-parse'
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
@@ -14,7 +16,6 @@ export async function POST(req: NextRequest) {
   const arrayBuffer = await file.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
 
-  const pdfParse = (await import('pdf-parse')).default
   const data = await pdfParse(buffer)
 
   return NextResponse.json({ text: data.text, pages: data.numpages })
