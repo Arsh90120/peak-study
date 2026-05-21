@@ -1,8 +1,13 @@
 import Link from 'next/link'
+import { auth } from '@clerk/nextjs/server'
+import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import { Zap, FileText, Brain, CheckSquare, ArrowRight, Upload } from 'lucide-react'
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const { userId } = await auth()
+  if (userId) redirect('/dashboard')
+
   return (
     <div style={{ background: 'var(--background)', minHeight: '100vh' }}>
       <Navbar />
