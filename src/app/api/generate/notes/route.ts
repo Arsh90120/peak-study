@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { nvidiaClient, MODEL } from '@/lib/nvidia'
 
 export async function POST(req: NextRequest) {
-  const { userId } = auth()
+  const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { content, title } = await req.json()
@@ -18,7 +18,7 @@ Format your response as JSON with this exact structure:
   "sections": [
     {
       "heading": "string",
-      "points": ["string", "string", ...],
+      "points": ["string", "string"],
       "keyTerms": [{"term": "string", "definition": "string"}]
     }
   ],

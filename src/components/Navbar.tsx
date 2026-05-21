@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useTheme } from './ThemeProvider'
-import { UserButton, SignedIn, SignedOut } from '@clerk/nextjs'
+import { UserButton, Show } from '@clerk/nextjs'
 import { Sun, Moon, Zap } from 'lucide-react'
 
 export default function Navbar() {
@@ -25,21 +25,21 @@ export default function Navbar() {
             {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
           </button>
 
-          <SignedOut>
+          <Show when="signed-out">
             <Link href="/sign-in" className="text-sm font-medium px-4 py-1.5 rounded-btn transition-colors" style={{ color: 'var(--text-muted)' }}>
               Sign in
             </Link>
             <Link href="/sign-up" className="text-sm font-semibold px-4 py-1.5 rounded-btn transition-colors text-white" style={{ background: 'var(--accent)' }}>
               Get started
             </Link>
-          </SignedOut>
+          </Show>
 
-          <SignedIn>
+          <Show when="signed-in">
             <Link href="/dashboard" className="text-sm font-medium px-4 py-1.5 rounded-btn transition-colors" style={{ color: 'var(--text-muted)' }}>
               Dashboard
             </Link>
             <UserButton afterSignOutUrl="/" />
-          </SignedIn>
+          </Show>
         </div>
       </div>
     </nav>

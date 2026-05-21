@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { nvidiaClient, MODEL } from '@/lib/nvidia'
 
 export async function POST(req: NextRequest) {
-  const { userId } = auth()
+  const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { content, count = 8 } = await req.json()
@@ -18,12 +18,10 @@ Format as JSON:
       "question": "string",
       "options": ["A. string", "B. string", "C. string", "D. string"],
       "correct": "A",
-      "explanation": "string (brief explanation of correct answer)"
+      "explanation": "string"
     }
   ]
 }
-
-Make questions clear, specific, and test real understanding — not just memorization. Vary difficulty.
 
 Study material:
 ${content.slice(0, 6000)}`
