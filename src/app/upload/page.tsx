@@ -1,21 +1,29 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import { Upload, FileText, Type, Lightbulb, ArrowRight, Loader2, X } from 'lucide-react'
 
 type InputType = 'pdf' | 'text' | 'topic'
 
-export default function UploadPage() {
+function UploadForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [inputType, setInputType] = useState<InputType>((searchParams.get('type') as InputType) || 'pdf')
-  const [topic, setTopic] = useState('')
+  const [topic, setTopic] = useState(searchParams.get('q') || '')
   const [text, setText] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Auto-submit if topic came pre-filled from PeakChat
+  useEffect(() => {
+    const q = searchParams.get('q')
+    if (q && searchParams.get('type') === 'topic') {
+      setTopic(q)
+    }
+  }, [])
 
   const tabs: { id: InputType; label: string; icon: React.ReactNode }[] = [
     { id: 'pdf', label: 'Upload PDF', icon: <Upload size={15} /> },
@@ -50,7 +58,6 @@ export default function UploadPage() {
         title = file.name.replace('.pdf', '')
       }
 
-      // Generate notes and quiz in parallel
       const [notesRes, quizRes] = await Promise.all([
         fetch('/api/generate/notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, title }) }),
         fetch('/api/generate/quiz', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content }) }),
@@ -60,7 +67,6 @@ export default function UploadPage() {
       if (!notesRes.ok) throw new Error(notesData.error || 'Notes generation failed')
       if (!quizRes.ok) throw new Error(quizData.error || 'Quiz generation failed')
 
-      // Save session
       const sessionRes = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -80,15 +86,18 @@ export default function UploadPage() {
     <div style={{ background: 'var(--background)', minHeight: '100vh' }}>
       <Navbar />
       <div className="max-w-2xl mx-auto px-6 pt-28 pb-16">
-        <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>New study session</h1>
-        <p className="mb-8" style={{ color: 'var(--text-muted)' }}>PEAK AI will generate notes and a quiz for you in seconds.</p>
+        <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>New study session</h1>
+        <p className="mb-8" style={{ color: 'var(--muted-foreground)' }}>PEAK AI will generate notes and a quiz for you in seconds.</p>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-1 rounded-card mb-6" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <div className="flex gap-1 p-1 rounded-xl mb-6 border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
           {tabs.map(t => (
             <button key={t.id} onClick={() => setInputType(t.id)}
-              className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-btn transition-all"
-              style={inputType === t.id ? { background: 'var(--accent)', color: '#fff' } : { color: 'var(--text-muted)' }}>
+              className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all"
+              style={inputType === t.id
+                ? { background: 'var(--primary)', color: 'var(--primary-foreground)' }
+                : { color: 'var(--muted-foreground)' }
+              }>
               {t.icon} {t.label}
             </button>
           ))}
@@ -99,20 +108,20 @@ export default function UploadPage() {
           {inputType === 'pdf' && (
             <div
               onClick={() => fileRef.current?.click()}
-              className="border-2 border-dashed rounded-card p-10 text-center cursor-pointer transition-all hover:opacity-70"
+              className="border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all hover:opacity-70"
               style={{ borderColor: 'var(--border)' }}
             >
               {file ? (
                 <div className="flex items-center justify-center gap-3">
-                  <FileText size={20} style={{ color: 'var(--accent)' }} />
-                  <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{file.name}</span>
-                  <button onClick={e => { e.stopPropagation(); setFile(null) }} style={{ color: 'var(--text-muted)' }}><X size={16} /></button>
+                  <FileText size={20} style={{ color: 'var(--primary)' }} />
+                  <span className="font-medium" style={{ color: 'var(--foreground)' }}>{file.name}</span>
+                  <button onClick={e => { e.stopPropagation(); setFile(null) }} style={{ color: 'var(--muted-foreground)' }}><X size={16} /></button>
                 </div>
               ) : (
                 <>
-                  <Upload size={28} className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
-                  <p className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Drop your PDF here</p>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>or click to browse</p>
+                  <Upload size={28} className="mx-auto mb-3" style={{ color: 'var(--muted-foreground)' }} />
+                  <p className="font-medium mb-1" style={{ color: 'var(--foreground)' }}>Drop your PDF here</p>
+                  <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>or click to browse</p>
                 </>
               )}
               <input ref={fileRef} type="file" accept=".pdf" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
@@ -123,8 +132,8 @@ export default function UploadPage() {
             <input
               type="text" value={topic} onChange={e => setTopic(e.target.value)}
               placeholder="e.g. Mitosis and meiosis, The French Revolution, Newton's laws..."
-              className="w-full px-4 py-3 rounded-card border text-base outline-none transition-all focus:ring-2"
-              style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+              className="w-full px-4 py-3 rounded-xl border text-base outline-none transition-all"
+              style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
               onKeyDown={e => e.key === 'Enter' && handleSubmit()}
             />
           )}
@@ -134,22 +143,34 @@ export default function UploadPage() {
               value={text} onChange={e => setText(e.target.value)}
               placeholder="Paste your notes, textbook excerpt, or any study material here..."
               rows={10}
-              className="w-full px-4 py-3 rounded-card border text-base outline-none transition-all focus:ring-2 resize-none"
-              style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+              className="w-full px-4 py-3 rounded-xl border text-base outline-none resize-none"
+              style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
             />
           )}
         </div>
 
-        {error && <p className="text-sm mb-4 px-4 py-3 rounded-btn" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>{error}</p>}
+        {error && (
+          <p className="text-sm mb-4 px-4 py-3 rounded-lg" style={{ background: 'rgba(229,77,46,0.1)', color: 'var(--destructive)' }}>{error}</p>
+        )}
 
         <button
           onClick={handleSubmit} disabled={loading}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-btn font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50"
-          style={{ background: 'var(--accent)' }}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-all hover:opacity-90 disabled:opacity-50"
+          style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
         >
-          {loading ? <><Loader2 size={17} className="animate-spin" /> Generating with PEAK AI...</> : <>Generate study materials <ArrowRight size={16} /></>}
+          {loading
+            ? <><Loader2 size={17} className="animate-spin" /> Generating with PEAK AI...</>
+            : <>Generate study materials <ArrowRight size={16} /></>}
         </button>
       </div>
     </div>
+  )
+}
+
+export default function UploadPage() {
+  return (
+    <Suspense fallback={<div style={{ background: 'var(--background)', minHeight: '100vh' }} />}>
+      <UploadForm />
+    </Suspense>
   )
 }
