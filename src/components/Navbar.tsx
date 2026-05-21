@@ -1,47 +1,93 @@
 'use client'
+
+import { Zap, Menu } from 'lucide-react'
 import Link from 'next/link'
-import { useTheme } from './ThemeProvider'
-import { UserButton, SignedIn, SignedOut } from '@clerk/nextjs'
-import { Sun, Moon, Zap } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
+import { Button } from '@/components/ui/button'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
+import ThemeToggle from '@/components/ThemeToggle'
 
 export default function Navbar() {
-  const { theme, toggle } = useTheme()
+  const pathname = usePathname()
+  const isLanding = pathname === '/'
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-      <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-bold text-lg tracking-tight" style={{ color: 'var(--text-primary)' }}>
-          <Zap size={18} style={{ color: 'var(--accent)' }} fill="currentColor" />
-          PEAK
+    <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/80 backdrop-blur-md" style={{ borderColor: 'var(--border)' }}>
+      <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2">
+          <Zap size={18} fill="currentColor" style={{ color: 'var(--accent-brand)' }} />
+          <span className="text-lg font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>PEAK</span>
         </Link>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={toggle}
-            className="p-2 rounded-btn transition-colors hover:opacity-70"
-            style={{ color: 'var(--text-muted)' }}
-            aria-label="Toggle theme"
-          >
-            {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
-          </button>
-
+        {/* Desktop right */}
+        <div className="hidden md:flex items-center gap-3">
+          <ThemeToggle />
           <SignedOut>
-            <Link href="/sign-in" className="text-sm font-medium px-4 py-1.5 rounded-btn transition-colors" style={{ color: 'var(--text-muted)' }}>
-              Sign in
-            </Link>
-            <Link href="/sign-up" className="text-sm font-semibold px-4 py-1.5 rounded-btn transition-colors text-white" style={{ background: 'var(--accent)' }}>
-              Get started
-            </Link>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/sign-in">Log in</Link>
+            </Button>
+            <Button asChild size="sm" style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>
+              <Link href="/sign-up">Sign up</Link>
+            </Button>
           </SignedOut>
-
           <SignedIn>
-            <Link href="/dashboard" className="text-sm font-medium px-4 py-1.5 rounded-btn transition-colors" style={{ color: 'var(--text-muted)' }}>
-              Dashboard
-            </Link>
+            {!isLanding && (
+              <Button asChild variant="outline" size="sm">
+                <Link href="/dashboard">Dashboard</Link>
+              </Button>
+            )}
             <UserButton afterSignOutUrl="/" />
           </SignedIn>
         </div>
+
+        {/* Mobile */}
+        <div className="flex md:hidden items-center gap-2">
+          <ThemeToggle />
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Menu className="size-4" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>
+                  <Link href="/" className="flex items-center gap-2">
+                    <Zap size={16} fill="currentColor" style={{ color: 'var(--accent-brand)' }} />
+                    <span className="font-bold">PEAK</span>
+                  </Link>
+                </SheetTitle>
+              </SheetHeader>
+              <div className="mt-8 flex flex-col gap-4">
+                <SignedOut>
+                  <Button asChild variant="outline">
+                    <Link href="/sign-in">Log in</Link>
+                  </Button>
+                  <Button asChild style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>
+                    <Link href="/sign-up">Sign up</Link>
+                  </Button>
+                </SignedOut>
+                <SignedIn>
+                  <Button asChild variant="outline">
+                    <Link href="/dashboard">Dashboard</Link>
+                  </Button>
+                  <div className="pt-2">
+                    <UserButton afterSignOutUrl="/" />
+                  </div>
+                </SignedIn>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
-    </nav>
+    </header>
   )
 }

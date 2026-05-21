@@ -2,65 +2,93 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap');
 
-/* ── PEAK custom tokens ── */
 :root {
-  --background: #f9f9f7;
-  --surface: #ffffff;
-  --border: #e5e4e0;
-  --text-primary: #1a1a18;
-  --text-muted: #888882;
-  --accent: #7c3aed;
-  --accent-hover: #6d28d9;
+  --card: #fcfcfc;
+  --ring: #644a40;
+  --input: #d8d8d8;
+  --muted: #efefef;
+  --accent: #e8e8e8;
+  --border: #d8d8d8;
+  --radius: 0.5rem;
+  --chart-1: #644a40;
+  --chart-2: #ffdfb5;
+  --chart-3: #e8e8e8;
+  --chart-4: #ffe6c4;
+  --chart-5: #66493e;
+  --popover: #fcfcfc;
+  --primary: #644a40;
+  --sidebar: #fbfbfb;
+  --secondary: #ffdfb5;
+  --background: #f9f9f9;
+  --foreground: #202020;
+  --destructive: #e54d2e;
+  --sidebar-ring: #b5b5b5;
+  --sidebar-accent: #f7f7f7;
+  --sidebar-border: #ebebeb;
+  --card-foreground: #202020;
+  --sidebar-primary: #343434;
+  --muted-foreground: #646464;
+  --accent-foreground: #202020;
+  --popover-foreground: #202020;
+  --primary-foreground: #ffffff;
+  --sidebar-foreground: #252525;
+  --secondary-foreground: #582d1d;
+  --destructive-foreground: #ffffff;
+  --sidebar-accent-foreground: #343434;
+  --sidebar-primary-foreground: #fbfbfb;
+
+  /* legacy PEAK tokens mapped to new theme */
+  --background-page: #f9f9f9;
+  --surface: #fcfcfc;
+  --text-primary: #202020;
+  --text-muted: #646464;
+  --accent-brand: #644a40;
+  --accent-hover: #4f3830;
 }
 
 .dark {
-  --background: #0d0d14;
-  --surface: #13131f;
-  --border: #1f1f35;
-  --text-primary: #f0eeff;
-  --text-muted: #6b6b8a;
-  --accent: #7c3aed;
-  --accent-hover: #9158f5;
-}
+  --card: #191919;
+  --ring: #ffe0c2;
+  --input: #484848;
+  --muted: #222222;
+  --accent: #2a2a2a;
+  --border: #201e18;
+  --radius: 0.5rem;
+  --chart-1: #ffe0c2;
+  --chart-2: #393028;
+  --chart-3: #2a2a2a;
+  --chart-4: #42382e;
+  --chart-5: #ffe0c1;
+  --popover: #191919;
+  --primary: #ffe0c2;
+  --sidebar: #18181b;
+  --secondary: #393028;
+  --background: #111111;
+  --foreground: #eeeeee;
+  --destructive: #e54d2e;
+  --sidebar-ring: #d4d4d8;
+  --sidebar-accent: #27272a;
+  --sidebar-border: #27272a;
+  --card-foreground: #eeeeee;
+  --sidebar-primary: #1d4ed8;
+  --muted-foreground: #b4b4b4;
+  --accent-foreground: #eeeeee;
+  --popover-foreground: #eeeeee;
+  --primary-foreground: #081a1b;
+  --sidebar-foreground: #f4f4f5;
+  --secondary-foreground: #ffe0c2;
+  --destructive-foreground: #ffffff;
+  --sidebar-accent-foreground: #f4f4f5;
+  --sidebar-primary-foreground: #ffffff;
 
-/* ── shadcn/ui CSS tokens ── */
-:root {
-  --foreground: 0 0% 3.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 3.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 3.9%;
-  --primary: 263 70% 50%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 0 0% 96%;
-  --secondary-foreground: 0 0% 9%;
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 45%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 98%;
-  --input: 0 0% 90%;
-  --ring: 263 70% 50%;
-  --radius: 8px;
-}
-
-.dark {
-  --foreground: 0 0% 98%;
-  --card: 240 10% 8%;
-  --card-foreground: 0 0% 98%;
-  --popover: 240 10% 8%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 263 70% 55%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 240 4% 13%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 240 4% 13%;
-  --muted-foreground: 240 5% 55%;
-  --destructive: 0 63% 31%;
-  --destructive-foreground: 0 0% 98%;
-  --input: 240 4% 13%;
-  --ring: 263 70% 55%;
+  --background-page: #111111;
+  --surface: #191919;
+  --text-primary: #eeeeee;
+  --text-muted: #b4b4b4;
+  --accent-brand: #ffe0c2;
+  --accent-hover: #ffd0a8;
 }
 
 * {
@@ -75,12 +103,12 @@ html {
 
 body {
   background-color: var(--background);
-  color: var(--text-primary);
-  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--foreground);
+  font-family: 'Geist', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 ::selection {
-  background: rgba(124, 58, 237, 0.2);
+  background: rgba(100, 74, 64, 0.2);
 }
