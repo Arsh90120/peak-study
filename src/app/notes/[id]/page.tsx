@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
+import { MathText } from '@/components/MathText'
 import { CheckSquare, ArrowRight, BookOpen, Lightbulb, ChevronDown, ChevronUp, AlertTriangle, Network } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -68,7 +69,7 @@ export default function NotesPage() {
             )}
           </div>
           <h1 className="text-3xl font-bold mb-3" style={{ color: 'var(--foreground)' }}>{notes.title || sessionTitle}</h1>
-          <p className="text-base leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>{notes.summary}</p>
+          <MathText text={notes.summary} style={{ color: 'var(--muted-foreground)', fontSize: '1rem', lineHeight: '1.6' }} />
         </div>
 
         <div className="h-px mb-8" style={{ background: 'var(--border)' }} />
@@ -83,7 +84,7 @@ export default function NotesPage() {
               {notes.keyTakeaways.map((t, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm" style={{ color: 'var(--foreground)' }}>
                   <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--primary)' }} />
-                  {t}
+                  <MathText text={t} />
                 </li>
               ))}
             </ul>
@@ -93,18 +94,12 @@ export default function NotesPage() {
         <div className="space-y-3 mb-8">
           {notes.sections?.map((s, i) => (
             <div key={i} className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
-              <button
-                onClick={() => toggle(i)}
-                className="w-full flex items-center justify-between px-5 py-4 text-left transition-colors hover:bg-muted"
-                style={{ background: 'var(--card)' }}
-              >
+              <button onClick={() => toggle(i)} className="w-full flex items-center justify-between px-5 py-4 text-left transition-colors hover:bg-muted" style={{ background: 'var(--card)' }}>
                 <div className="flex items-center gap-3">
                   <BookOpen size={15} style={{ color: 'var(--primary)' }} />
                   <span className="font-semibold text-sm" style={{ color: 'var(--foreground)' }}>{s.heading}</span>
                 </div>
-                {openSections[i]
-                  ? <ChevronUp size={16} style={{ color: 'var(--muted-foreground)' }} />
-                  : <ChevronDown size={16} style={{ color: 'var(--muted-foreground)' }} />}
+                {openSections[i] ? <ChevronUp size={16} style={{ color: 'var(--muted-foreground)' }} /> : <ChevronDown size={16} style={{ color: 'var(--muted-foreground)' }} />}
               </button>
 
               {openSections[i] && (
@@ -114,7 +109,7 @@ export default function NotesPage() {
                     {s.points?.map((p, j) => (
                       <li key={j} className="flex items-start gap-2 text-sm leading-relaxed" style={{ color: 'var(--foreground)' }}>
                         <span className="mt-2 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--primary)' }} />
-                        {p}
+                        <MathText text={p} />
                       </li>
                     ))}
                   </ul>
@@ -124,7 +119,7 @@ export default function NotesPage() {
                       <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" style={{ color: 'rgb(234,179,8)' }} />
                       <div>
                         <p className="text-xs font-semibold mb-0.5" style={{ color: 'rgb(234,179,8)' }}>Common Misconception</p>
-                        <p className="text-xs leading-relaxed" style={{ color: 'var(--foreground)' }}>{s.commonMisconception}</p>
+                        <MathText text={s.commonMisconception} style={{ fontSize: '12px', lineHeight: '1.5', color: 'var(--foreground)' }} />
                       </div>
                     </div>
                   )}
@@ -136,7 +131,8 @@ export default function NotesPage() {
                         {s.keyTerms.map((kt, k) => (
                           <div key={k} className="text-sm">
                             <span className="font-medium" style={{ color: 'var(--primary)' }}>{kt.term}</span>
-                            <span style={{ color: 'var(--muted-foreground)' }}> — {kt.definition}</span>
+                            <span style={{ color: 'var(--muted-foreground)' }}> — </span>
+                            <MathText text={kt.definition} style={{ color: 'var(--muted-foreground)' }} />
                           </div>
                         ))}
                       </div>
@@ -158,7 +154,7 @@ export default function NotesPage() {
               {notes.connections.map((c, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm leading-relaxed" style={{ color: 'var(--foreground)' }}>
                   <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--primary)' }} />
-                  {c}
+                  <MathText text={c} />
                 </li>
               ))}
             </ul>
@@ -170,11 +166,7 @@ export default function NotesPage() {
             <p className="font-semibold" style={{ color: 'var(--foreground)' }}>Ready to test yourself?</p>
             <p className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>PEAK AI built a quiz based on these notes</p>
           </div>
-          <Link
-            href={`/quiz/${id}`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:opacity-90"
-            style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
-          >
+          <Link href={`/quiz/${id}`} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:opacity-90" style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>
             <CheckSquare size={15} /> Take quiz <ArrowRight size={14} />
           </Link>
         </div>

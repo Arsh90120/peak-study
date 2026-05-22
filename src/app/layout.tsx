@@ -18,6 +18,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
+        <head>
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+          <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" />
+        </head>
         <body>
           <ThemeProvider>
             {children}
