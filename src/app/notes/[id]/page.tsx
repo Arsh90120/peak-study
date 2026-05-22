@@ -3,12 +3,19 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
-import { CheckSquare, ArrowRight, BookOpen, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react'
+import { CheckSquare, ArrowRight, BookOpen, Lightbulb, ChevronDown, ChevronUp, AlertTriangle, Network } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type KeyTerm = { term: string; definition: string }
-type Section = { heading: string; points: string[]; keyTerms: KeyTerm[] }
-type Notes = { title: string; summary: string; sections: Section[]; keyTakeaways: string[] }
+type Section = { heading: string; points: string[]; keyTerms: KeyTerm[]; commonMisconception?: string }
+type Notes = {
+  title: string
+  summary: string
+  subjectType?: string
+  sections: Section[]
+  keyTakeaways: string[]
+  connections?: string[]
+}
 
 export default function NotesPage() {
   const { id } = useParams()
@@ -52,7 +59,14 @@ export default function NotesPage() {
       <div className="max-w-3xl mx-auto px-6 pt-24 pb-16">
 
         <div className="mb-8">
-          <p className="text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: 'var(--primary)' }}>PEAK AI Notes</p>
+          <div className="flex items-center gap-3 mb-2">
+            <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: 'var(--primary)' }}>PEAK AI Notes</p>
+            {notes.subjectType && (
+              <span className="text-xs px-2 py-0.5 rounded-full border font-medium" style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)', background: 'var(--muted)' }}>
+                {notes.subjectType}
+              </span>
+            )}
+          </div>
           <h1 className="text-3xl font-bold mb-3" style={{ color: 'var(--foreground)' }}>{notes.title || sessionTitle}</h1>
           <p className="text-base leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>{notes.summary}</p>
         </div>
@@ -76,7 +90,7 @@ export default function NotesPage() {
           </div>
         )}
 
-        <div className="space-y-3 mb-10">
+        <div className="space-y-3 mb-8">
           {notes.sections?.map((s, i) => (
             <div key={i} className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
               <button
@@ -104,6 +118,17 @@ export default function NotesPage() {
                       </li>
                     ))}
                   </ul>
+
+                  {s.commonMisconception && (
+                    <div className="mb-4 p-3 rounded-lg border flex items-start gap-2" style={{ background: 'rgba(234,179,8,0.06)', borderColor: 'rgba(234,179,8,0.25)' }}>
+                      <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" style={{ color: 'rgb(234,179,8)' }} />
+                      <div>
+                        <p className="text-xs font-semibold mb-0.5" style={{ color: 'rgb(234,179,8)' }}>Common Misconception</p>
+                        <p className="text-xs leading-relaxed" style={{ color: 'var(--foreground)' }}>{s.commonMisconception}</p>
+                      </div>
+                    </div>
+                  )}
+
                   {s.keyTerms?.length > 0 && (
                     <div>
                       <p className="text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: 'var(--muted-foreground)' }}>Key Terms</p>
@@ -122,6 +147,23 @@ export default function NotesPage() {
             </div>
           ))}
         </div>
+
+        {notes.connections && notes.connections.length > 0 && (
+          <div className="mb-8 p-5 rounded-xl border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Network size={16} style={{ color: 'var(--primary)' }} />
+              <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: 'var(--muted-foreground)' }}>Bigger Picture</p>
+            </div>
+            <ul className="space-y-2">
+              {notes.connections.map((c, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm leading-relaxed" style={{ color: 'var(--foreground)' }}>
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--primary)' }} />
+                  {c}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="p-6 rounded-xl border flex items-center justify-between" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
           <div>
