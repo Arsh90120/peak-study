@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const completion = await nvidiaClient.chat.completions.create({
+    const stream = await nvidiaClient.chat.completions.create({
       model: MODEL,
       messages: [
         {
@@ -37,10 +37,32 @@ Never make up facts. If you're unsure, say so directly.`
       ],
       temperature: 0.7,
       max_tokens: 1024,
+      stream: true,
     })
 
-    const reply = completion.choices[0].message.content || ''
-    return NextResponse.json({ reply })
+    const encoder = new TextEncoder()
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            const text = chunk.choices[0]?.delta?.content || ''
+            if (text) {
+              controller.enqueue(encoder.encode(text))
+            }
+          }
+        } finally {
+          controller.close()
+        }
+      },
+    })
+
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Transfer-Encoding': 'chunked',
+        'X-Accel-Buffering': 'no',
+      },
+    })
   } catch (e) {
     console.error(e)
     return NextResponse.json({ error: 'AI failed to respond' }, { status: 500 })
