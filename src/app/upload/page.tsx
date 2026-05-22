@@ -7,10 +7,10 @@ import { Upload, FileText, Type, Lightbulb, ArrowRight, Loader2, X, CheckCircle2
 type InputType = 'pdf' | 'text' | 'topic'
 
 const LOADING_STEPS = [
-  { label: 'Reading your material...', duration: 2500 },
-  { label: 'Analyzing key concepts...', duration: 3500 },
-  { label: 'Building your notes...', duration: 4000 },
-  { label: 'Generating quiz questions...', duration: 3500 },
+  { label: 'Reading your material...', duration: 3000 },
+  { label: 'Analyzing key concepts...', duration: 5000 },
+  { label: 'Building your notes...', duration: 6000 },
+  { label: 'Generating quiz questions...', duration: 5000 },
   { label: 'Almost done...', duration: 99999 },
 ]
 
@@ -40,30 +40,19 @@ function LoadingScreen() {
       <Navbar />
       <div className="max-w-md mx-auto px-6 pt-40 pb-16 flex flex-col items-center text-center">
         <div className="relative mb-8">
-          <div
-            className="w-20 h-20 rounded-2xl flex items-center justify-center"
-            style={{ background: 'rgba(100,74,64,0.1)' }}
-          >
+          <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(100,74,64,0.1)' }}>
             <Sparkles size={36} style={{ color: 'var(--primary)' }} className="animate-pulse" />
           </div>
         </div>
-
         <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>PEAK AI is working...</h2>
-        <p className="text-sm mb-10" style={{ color: 'var(--muted-foreground)' }}>Hang tight, this usually takes 15–30 seconds</p>
-
+        <p className="text-sm mb-10" style={{ color: 'var(--muted-foreground)' }}>Hang tight, this usually takes 20–45 seconds</p>
         <div className="w-full space-y-3">
           {LOADING_STEPS.slice(0, -1).map((step, i) => {
             const isDone = completedSteps.includes(i)
             const isActive = stepIndex === i
             return (
-              <div
-                key={i}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
-                style={{
-                  background: isActive ? 'rgba(100,74,64,0.08)' : 'transparent',
-                  opacity: i > stepIndex ? 0.3 : 1,
-                }}
-              >
+              <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
+                style={{ background: isActive ? 'rgba(100,74,64,0.08)' : 'transparent', opacity: i > stepIndex ? 0.3 : 1 }}>
                 <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
                   {isDone
                     ? <CheckCircle2 size={18} style={{ color: '#22c55e' }} />
@@ -72,10 +61,8 @@ function LoadingScreen() {
                       : <div className="w-4 h-4 rounded-full border-2" style={{ borderColor: 'var(--border)' }} />
                   }
                 </div>
-                <span
-                  className="text-sm font-medium"
-                  style={{ color: isDone ? 'var(--muted-foreground)' : isActive ? 'var(--foreground)' : 'var(--muted-foreground)' }}
-                >
+                <span className="text-sm font-medium"
+                  style={{ color: isDone ? 'var(--muted-foreground)' : isActive ? 'var(--foreground)' : 'var(--muted-foreground)' }}>
                   {step.label}
                 </span>
               </div>
@@ -135,19 +122,33 @@ function UploadForm() {
         title = file.name.replace('.pdf', '')
       }
 
-      const [notesRes, quizRes] = await Promise.all([
-        fetch('/api/generate/notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, title }) }),
-        fetch('/api/generate/quiz', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content }) }),
-      ])
-
-      const [notesData, quizData] = await Promise.all([notesRes.json(), quizRes.json()])
+      // Sequential — notes first, then quiz (avoids rate limit from parallel calls)
+      const notesRes = await fetch('/api/generate/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, title }),
+      })
+      const notesData = await notesRes.json()
       if (!notesRes.ok) throw new Error(notesData.error || 'Notes generation failed')
+
+      const quizRes = await fetch('/api/generate/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      })
+      const quizData = await quizRes.json()
       if (!quizRes.ok) throw new Error(quizData.error || 'Quiz generation failed')
 
       const sessionRes = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, input_type: inputType, notes: notesData.notes, quiz: quizData.quiz, raw_content: content.slice(0, 5000) }),
+        body: JSON.stringify({
+          title,
+          input_type: inputType,
+          notes: notesData.notes,
+          quiz: quizData.quiz,
+          raw_content: content.slice(0, 5000),
+        }),
       })
       const sessionData = await sessionRes.json()
       if (!sessionRes.ok) throw new Error(sessionData.error || 'Session save failed')
@@ -183,11 +184,9 @@ function UploadForm() {
 
         <div className="mb-6">
           {inputType === 'pdf' && (
-            <div
-              onClick={() => fileRef.current?.click()}
+            <div onClick={() => fileRef.current?.click()}
               className="border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all hover:opacity-70"
-              style={{ borderColor: 'var(--border)' }}
-            >
+              style={{ borderColor: 'var(--border)' }}>
               {file ? (
                 <div className="flex items-center justify-center gap-3">
                   <FileText size={20} style={{ color: 'var(--primary)' }} />
@@ -204,25 +203,19 @@ function UploadForm() {
               <input ref={fileRef} type="file" accept=".pdf" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
             </div>
           )}
-
           {inputType === 'topic' && (
-            <input
-              type="text" value={topic} onChange={e => setTopic(e.target.value)}
+            <input type="text" value={topic} onChange={e => setTopic(e.target.value)}
               placeholder="e.g. Mitosis and meiosis, The French Revolution, Newton's laws..."
-              className="w-full px-4 py-3 rounded-xl border text-base outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl border text-base outline-none"
               style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
-              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-            />
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
           )}
-
           {inputType === 'text' && (
-            <textarea
-              value={text} onChange={e => setText(e.target.value)}
+            <textarea value={text} onChange={e => setText(e.target.value)}
               placeholder="Paste your notes, textbook excerpt, or any study material here..."
               rows={10}
               className="w-full px-4 py-3 rounded-xl border text-base outline-none resize-none"
-              style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
-            />
+              style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }} />
           )}
         </div>
 
@@ -233,11 +226,9 @@ function UploadForm() {
           </div>
         )}
 
-        <button
-          onClick={handleSubmit} disabled={loading}
+        <button onClick={handleSubmit} disabled={loading}
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-all hover:opacity-90 disabled:opacity-50"
-          style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
-        >
+          style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>
           Generate study materials <ArrowRight size={16} />
         </button>
       </div>
