@@ -37,13 +37,11 @@ export function FloatingAiAssistant() {
   const handleSend = async () => {
     const text = input.trim()
     if (!text || loading) return
-
     const userMessage: Message = { role: 'user', content: text }
     const newMessages = [...messages, userMessage]
     setMessages(newMessages)
     setInput('')
     setLoading(true)
-
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -51,11 +49,10 @@ export function FloatingAiAssistant() {
         body: JSON.stringify({ messages: newMessages }),
       })
       const data = await res.json()
-      if (data.reply) {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
-      } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, something went wrong. Try again.' }])
-      }
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: data.reply || 'Sorry, something went wrong. Try again.',
+      }])
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Could not connect. Please try again.' }])
     } finally {
@@ -71,130 +68,188 @@ export function FloatingAiAssistant() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
-      <button
-        className={`floating-ai-button relative w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 ${
-          isChatOpen ? 'rotate-90' : 'rotate-0'
-        }`}
-        onClick={() => setIsChatOpen(!isChatOpen)}
-        style={{
-          background: 'var(--primary)',
-          boxShadow: '0 0 20px rgba(100,74,64,0.4), 0 4px 12px rgba(0,0,0,0.15)',
-          border: '2px solid rgba(255,255,255,0.15)',
-        }}
-      >
-        <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/20 to-transparent opacity-30" />
-        <div className="relative z-10">
-          {isChatOpen ? <X className="w-5 h-5 text-white" /> : <Bot className="w-6 h-6 text-white" />}
-        </div>
-        <div className="absolute inset-0 rounded-full animate-ping opacity-10" style={{ background: 'var(--primary)' }} />
-      </button>
+    <>
+      <style>{`
+        @keyframes peakPopIn {
+          0% { opacity: 0; transform: scale(0.88) translateY(12px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .peak-chat-panel {
+          animation: peakPopIn 0.22s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+        }
+      `}</style>
 
-      {isChatOpen && (
-        <div
-          ref={chatRef}
-          className="absolute bottom-18 right-0 w-[420px] max-w-[calc(100vw-2rem)]"
-          style={{ animation: 'popIn 0.25s cubic-bezier(0.175,0.885,0.32,1.275) forwards' }}
-        >
-          <div className="flex flex-col rounded-2xl border shadow-2xl overflow-hidden" style={{ background: 'var(--card)', borderColor: 'var(--border)', maxHeight: '520px' }}>
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>PEAK AI Assistant</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {messages.length > 0 && (
-                  <button
-                    onClick={() => setMessages([])}
-                    className="text-xs px-2 py-1 rounded-lg border transition-colors hover:bg-muted"
-                    style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
-                  >
-                    Clear
-                  </button>
-                )}
-                <button onClick={() => setIsChatOpen(false)} className="p-1.5 rounded-full hover:bg-muted transition-colors">
-                  <X className="w-4 h-4" style={{ color: 'var(--muted-foreground)' }} />
-                </button>
-              </div>
-            </div>
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3" style={{ minHeight: '200px', maxHeight: '320px' }}>
-              {messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full py-8 text-center">
-                  <Bot size={28} className="mb-2" style={{ color: 'var(--muted-foreground)' }} />
-                  <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>Ask PEAK anything</p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>Explain concepts, clarify doubts, dive deeper</p>
+      <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 50 }}>
+        {/* Chat panel — renders ABOVE the button */}
+        {isChatOpen && (
+          <div
+            ref={chatRef}
+            className="peak-chat-panel"
+            style={{
+              position: 'absolute',
+              bottom: '72px',
+              right: '0',
+              width: '420px',
+              maxWidth: 'calc(100vw - 2rem)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                borderRadius: '16px',
+                border: '1px solid var(--border)',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+                background: 'var(--card)',
+                overflow: 'hidden',
+                maxHeight: '520px',
+              }}
+            >
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px 12px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }} />
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--foreground)' }}>PEAK AI Assistant</span>
                 </div>
-              )}
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div
-                    className="max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed"
-                    style={{
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {messages.length > 0 && (
+                    <button
+                      onClick={() => setMessages([])}
+                      style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--muted-foreground)', background: 'transparent', cursor: 'pointer' }}
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <button onClick={() => setIsChatOpen(false)} style={{ padding: '4px', borderRadius: '50%', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--muted-foreground)', display: 'flex' }}>
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Messages */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px', minHeight: '200px', maxHeight: '320px' }}>
+                {messages.length === 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center', padding: '32px 0' }}>
+                    <Bot size={28} style={{ color: 'var(--muted-foreground)', marginBottom: '8px' }} />
+                    <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--foreground)', margin: 0 }}>Ask PEAK anything</p>
+                    <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: '4px' }}>Explain concepts, clarify doubts, dive deeper</p>
+                  </div>
+                )}
+                {messages.map((msg, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                    <div style={{
+                      maxWidth: '85%',
+                      padding: '8px 12px',
+                      borderRadius: '16px',
+                      borderBottomRightRadius: msg.role === 'user' ? '4px' : '16px',
+                      borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : '16px',
+                      fontSize: '13px',
+                      lineHeight: '1.5',
                       background: msg.role === 'user' ? 'var(--primary)' : 'var(--muted)',
                       color: msg.role === 'user' ? 'var(--primary-foreground)' : 'var(--foreground)',
-                      borderBottomRightRadius: msg.role === 'user' ? '4px' : undefined,
-                      borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : undefined,
-                    }}
-                  >
-                    {msg.content}
+                      whiteSpace: 'pre-wrap',
+                    }}>
+                      {msg.content}
+                    </div>
                   </div>
-                </div>
-              ))}
-              {loading && (
-                <div className="flex justify-start">
-                  <div className="px-4 py-2.5 rounded-2xl rounded-bl-sm" style={{ background: 'var(--muted)' }}>
-                    <div className="flex gap-1">
+                ))}
+                {loading && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                    <div style={{ padding: '10px 14px', borderRadius: '16px', borderBottomLeftRadius: '4px', background: 'var(--muted)', display: 'flex', gap: '4px', alignItems: 'center' }}>
                       {[0,1,2].map(i => (
-                        <span key={i} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--muted-foreground)', animationDelay: `${i * 0.15}s` }} />
+                        <span key={i} style={{
+                          width: '6px', height: '6px', borderRadius: '50%',
+                          background: 'var(--muted-foreground)',
+                          display: 'inline-block',
+                          animation: `bounce 1s infinite ${i * 0.15}s`,
+                        }} />
                       ))}
                     </div>
                   </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input */}
-            <div className="px-4 pb-4 pt-2 border-t flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
-              <div className="flex items-end gap-2">
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  rows={1}
-                  disabled={loading}
-                  className="flex-1 px-3 py-2 rounded-xl border bg-transparent outline-none resize-none text-sm leading-relaxed placeholder:text-muted-foreground"
-                  style={{ color: 'var(--foreground)', borderColor: 'var(--border)', maxHeight: '100px' }}
-                  placeholder="Ask anything..."
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={loading || !input.trim()}
-                  className="p-2.5 rounded-xl text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-40 flex-shrink-0"
-                  style={{ background: 'var(--primary)' }}
-                >
-                  <Send className="w-4 h-4" />
-                </button>
+                )}
+                <div ref={messagesEndRef} />
               </div>
-              <div className="flex items-center gap-2 mt-2 text-xs" style={{ color: 'var(--muted-foreground)' }}>
-                <Info className="w-3 h-3" />
-                <span>Press <kbd className="px-1.5 py-0.5 rounded border font-mono" style={{ borderColor: 'var(--border)', background: 'var(--muted)' }}>Shift+Enter</kbd> for new line</span>
+
+              {/* Input */}
+              <div style={{ padding: '10px 16px 14px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    rows={1}
+                    disabled={loading}
+                    placeholder="Ask anything..."
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      borderRadius: '12px',
+                      border: '1px solid var(--border)',
+                      background: 'transparent',
+                      outline: 'none',
+                      resize: 'none',
+                      fontSize: '13px',
+                      lineHeight: '1.5',
+                      color: 'var(--foreground)',
+                      maxHeight: '100px',
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                  <button
+                    onClick={handleSend}
+                    disabled={loading || !input.trim()}
+                    style={{
+                      padding: '9px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      background: 'var(--primary)',
+                      color: 'white',
+                      cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+                      opacity: loading || !input.trim() ? 0.4 : 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      transition: 'opacity 0.15s',
+                    }}
+                  >
+                    <Send size={16} />
+                  </button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', fontSize: '11px', color: 'var(--muted-foreground)' }}>
+                  <Info size={11} />
+                  <span>Press <kbd style={{ padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--muted)', fontFamily: 'monospace', fontSize: '10px' }}>Shift+Enter</kbd> for new line</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <style jsx>{`
-        @keyframes popIn {
-          0% { opacity: 0; transform: scale(0.85) translateY(16px); }
-          100% { opacity: 1; transform: scale(1) translateY(0); }
-        }
-      `}</style>
-    </div>
+        {/* Floating button */}
+        <button
+          className="floating-ai-button"
+          onClick={() => setIsChatOpen(p => !p)}
+          style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            border: '2px solid rgba(255,255,255,0.15)',
+            background: 'var(--primary)',
+            boxShadow: '0 0 20px rgba(100,74,64,0.4), 0 4px 12px rgba(0,0,0,0.2)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            transition: 'transform 0.2s',
+            transform: isChatOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+            position: 'relative',
+          }}
+        >
+          {isChatOpen ? <X size={20} /> : <Bot size={22} />}
+        </button>
+      </div>
+    </>
   )
 }
