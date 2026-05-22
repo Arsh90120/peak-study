@@ -2,9 +2,90 @@
 import { useState, useRef, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
-import { Upload, FileText, Type, Lightbulb, ArrowRight, Loader2, X } from 'lucide-react'
+import { Upload, FileText, Type, Lightbulb, ArrowRight, Loader2, X, CheckCircle2, Sparkles } from 'lucide-react'
 
 type InputType = 'pdf' | 'text' | 'topic'
+
+const LOADING_STEPS = [
+  { label: 'Reading your material...', duration: 2500 },
+  { label: 'Analyzing key concepts...', duration: 3500 },
+  { label: 'Building your notes...', duration: 4000 },
+  { label: 'Generating quiz questions...', duration: 3500 },
+  { label: 'Almost done...', duration: 99999 },
+]
+
+function LoadingScreen() {
+  const [stepIndex, setStepIndex] = useState(0)
+  const [completedSteps, setCompletedSteps] = useState<number[]>([])
+
+  useEffect(() => {
+    let current = 0
+    const advance = () => {
+      if (current < LOADING_STEPS.length - 1) {
+        const timeout = setTimeout(() => {
+          setCompletedSteps(prev => [...prev, current])
+          current += 1
+          setStepIndex(current)
+          advance()
+        }, LOADING_STEPS[current].duration)
+        return timeout
+      }
+    }
+    const t = advance()
+    return () => { if (t) clearTimeout(t) }
+  }, [])
+
+  return (
+    <div style={{ background: 'var(--background)', minHeight: '100vh' }}>
+      <Navbar />
+      <div className="max-w-md mx-auto px-6 pt-40 pb-16 flex flex-col items-center text-center">
+        <div className="relative mb-8">
+          <div
+            className="w-20 h-20 rounded-2xl flex items-center justify-center"
+            style={{ background: 'rgba(100,74,64,0.1)' }}
+          >
+            <Sparkles size={36} style={{ color: 'var(--primary)' }} className="animate-pulse" />
+          </div>
+        </div>
+
+        <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>PEAK AI is working...</h2>
+        <p className="text-sm mb-10" style={{ color: 'var(--muted-foreground)' }}>Hang tight, this usually takes 15–30 seconds</p>
+
+        <div className="w-full space-y-3">
+          {LOADING_STEPS.slice(0, -1).map((step, i) => {
+            const isDone = completedSteps.includes(i)
+            const isActive = stepIndex === i
+            return (
+              <div
+                key={i}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
+                style={{
+                  background: isActive ? 'rgba(100,74,64,0.08)' : 'transparent',
+                  opacity: i > stepIndex ? 0.3 : 1,
+                }}
+              >
+                <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
+                  {isDone
+                    ? <CheckCircle2 size={18} style={{ color: '#22c55e' }} />
+                    : isActive
+                      ? <Loader2 size={18} className="animate-spin" style={{ color: 'var(--primary)' }} />
+                      : <div className="w-4 h-4 rounded-full border-2" style={{ borderColor: 'var(--border)' }} />
+                  }
+                </div>
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: isDone ? 'var(--muted-foreground)' : isActive ? 'var(--foreground)' : 'var(--muted-foreground)' }}
+                >
+                  {step.label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function UploadForm() {
   const router = useRouter()
@@ -17,12 +98,9 @@ function UploadForm() {
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // Auto-submit if topic came pre-filled from PeakChat
   useEffect(() => {
     const q = searchParams.get('q')
-    if (q && searchParams.get('type') === 'topic') {
-      setTopic(q)
-    }
+    if (q && searchParams.get('type') === 'topic') setTopic(q)
   }, [])
 
   const tabs: { id: InputType; label: string; icon: React.ReactNode }[] = [
@@ -34,7 +112,6 @@ function UploadForm() {
   async function handleSubmit() {
     setError('')
     setLoading(true)
-
     try {
       let content = ''
       let title = ''
@@ -77,10 +154,12 @@ function UploadForm() {
 
       router.push(`/notes/${sessionData.session.id}`)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Something went wrong')
+      setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
       setLoading(false)
     }
   }
+
+  if (loading) return <LoadingScreen />
 
   return (
     <div style={{ background: 'var(--background)', minHeight: '100vh' }}>
@@ -89,7 +168,6 @@ function UploadForm() {
         <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>New study session</h1>
         <p className="mb-8" style={{ color: 'var(--muted-foreground)' }}>PEAK AI will generate notes and a quiz for you in seconds.</p>
 
-        {/* Tabs */}
         <div className="flex gap-1 p-1 rounded-xl mb-6 border" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
           {tabs.map(t => (
             <button key={t.id} onClick={() => setInputType(t.id)}
@@ -103,7 +181,6 @@ function UploadForm() {
           ))}
         </div>
 
-        {/* Input area */}
         <div className="mb-6">
           {inputType === 'pdf' && (
             <div
@@ -150,7 +227,10 @@ function UploadForm() {
         </div>
 
         {error && (
-          <p className="text-sm mb-4 px-4 py-3 rounded-lg" style={{ background: 'rgba(229,77,46,0.1)', color: 'var(--destructive)' }}>{error}</p>
+          <div className="mb-4 px-4 py-3 rounded-lg flex items-start gap-2" style={{ background: 'rgba(229,77,46,0.1)', color: 'var(--destructive)' }}>
+            <X size={15} className="mt-0.5 flex-shrink-0" />
+            <p className="text-sm">{error}</p>
+          </div>
         )}
 
         <button
@@ -158,9 +238,7 @@ function UploadForm() {
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-all hover:opacity-90 disabled:opacity-50"
           style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
         >
-          {loading
-            ? <><Loader2 size={17} className="animate-spin" /> Generating with PEAK AI...</>
-            : <>Generate study materials <ArrowRight size={16} /></>}
+          Generate study materials <ArrowRight size={16} />
         </button>
       </div>
     </div>
