@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import { FloatingAiAssistant } from '@/components/FloatingAiAssistant'
 
 export const metadata: Metadata = {
   title: 'PEAK — Study smarter. Reach your peak.',
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <body>
           <ThemeProvider>
             {children}
+            <FloatingAiAssistant />
           </ThemeProvider>
         </body>
       </html>
