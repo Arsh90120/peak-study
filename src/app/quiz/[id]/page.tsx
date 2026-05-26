@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
@@ -37,6 +37,12 @@ function shuffleArray<T>(arr: T[]): T[] {
   return a
 }
 
+// Stable key for a matching question so shuffledDefs survive re-renders
+// but reset correctly when the question itself changes (on regenerate)
+function matchingKey(qi: number, pairs: MatchPair[]): string {
+  return `${qi}::${pairs.map(p => p.term).join('|')}`
+}
+
 export default function QuizPage() {
   const { id } = useParams()
   const [quiz, setQuiz] = useState<Quiz | null>(null)
@@ -49,9 +55,21 @@ export default function QuizPage() {
   const [shortAnswers, setShortAnswers] = useState<Record<number, string>>({})
   const [submitted, setSubmitted] = useState(false)
   const [score, setScore] = useState(0)
-  const [questionHistory, setQuestionHistory] = useState<string[]>([])
-  // Store shuffled definitions per matching question so they don't re-shuffle on re-render
-  const [shuffledDefs, setShuffledDefs] = useState<Record<number, string[]>>({})
+  const [coveredConcepts, setCoveredConcepts] = useState<string[]>([])
+
+  // shuffledDefs keyed by matchingKey (qi + terms), not just qi
+  // so regenerated questions with same index but different content get fresh shuffles
+  const shuffledDefsRef = useRef<Record<string, string[]>>({})
+  const [shuffledDefsVersion, setShuffledDefsVersion] = useState(0)
+
+  function getOrCreateShuffledDefs(qi: number, pairs: MatchPair[]): string[] {
+    const key = matchingKey(qi, pairs)
+    if (!shuffledDefsRef.current[key]) {
+      shuffledDefsRef.current[key] = shuffleArray(pairs.map(p => p.definition))
+      setShuffledDefsVersion(v => v + 1)
+    }
+    return shuffledDefsRef.current[key]
+  }
 
   useEffect(() => {
     supabase.from('sessions').select('quiz, raw_content').eq('id', id).single()
@@ -60,17 +78,16 @@ export default function QuizPage() {
           const q = data.quiz as Quiz
           setQuiz(q)
           setRawContent((data as Record<string, unknown>).raw_content as string || '')
-          // Pre-shuffle definitions for matching questions
-          const defs: Record<number, string[]> = {}
+          // Pre-populate shuffled defs
           q?.questions?.forEach((question, qi) => {
             if (question.type === 'matching' && question.pairs) {
-              defs[qi] = shuffleArray(question.pairs.map(p => p.definition))
+              getOrCreateShuffledDefs(qi, question.pairs)
             }
           })
-          setShuffledDefs(defs)
         }
         setLoading(false)
       })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   const regenerateQuiz = useCallback(async () => {
@@ -80,21 +97,31 @@ export default function QuizPage() {
       const res = await fetch('/api/generate/quiz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: rawContent, count: 8, previousQuestions: questionHistory }),
+        body: JSON.stringify({ content: rawContent, count: 8, coveredConcepts }),
       })
       const data = await res.json()
       if (data.quiz) {
         const q = data.quiz as Quiz
-        setQuiz(q)
-        setQuestionHistory(prev => [...prev, ...q.questions.map((qu: Question) => qu.question)])
-        // Pre-shuffle new matching questions
-        const defs: Record<number, string[]> = {}
+
+        // Clear ALL stale shuffled defs before setting new quiz
+        // so old keys don't bleed into new questions at same index
+        shuffledDefsRef.current = {}
+
+        // Pre-populate new shuffled defs
         q.questions.forEach((question, qi) => {
           if (question.type === 'matching' && question.pairs) {
-            defs[qi] = shuffleArray(question.pairs.map(p => p.definition))
+            const key = matchingKey(qi, question.pairs)
+            shuffledDefsRef.current[key] = shuffleArray(question.pairs.map(p => p.definition))
           }
         })
-        setShuffledDefs(defs)
+
+        // Accumulate covered concepts so next round avoids all of them
+        if (data.coveredConcepts?.length) {
+          setCoveredConcepts(prev => [...prev, ...data.coveredConcepts])
+        }
+
+        setQuiz(q)
+        setShuffledDefsVersion(v => v + 1)
         setAnswers({})
         setMatchingAnswers({})
         setFillAnswers({})
@@ -107,7 +134,7 @@ export default function QuizPage() {
     } finally {
       setRegenerating(false)
     }
-  }, [rawContent, questionHistory])
+  }, [rawContent, coveredConcepts])
 
   function selectOption(qi: number, letter: string) {
     if (submitted) return
@@ -163,6 +190,9 @@ export default function QuizPage() {
     setSubmitted(false)
     setScore(0)
   }
+
+  // shuffledDefsVersion in deps ensures render picks up fresh defs after regenerate
+  void shuffledDefsVersion
 
   if (loading) return (
     <div style={{ background: 'var(--background)', minHeight: '100vh' }}>
@@ -316,46 +346,59 @@ export default function QuizPage() {
                 )}
 
                 {/* MATCHING */}
-                {qType === 'matching' && q.pairs && (
-                  <div className="space-y-3">
-                    {q.pairs.map((pair, pi) => {
-                      const defs = shuffledDefs[qi] || q.pairs!.map(p => p.definition)
-                      const selectedDef = (matchingAnswers[qi] || {})[pair.term]
-                      const isCorrectMatch = submitted && selectedDef === pair.definition
-                      const isWrongMatch = submitted && !!selectedDef && selectedDef !== pair.definition
-                      return (
-                        <div key={pi} className="flex items-center gap-3">
-                          <span className="text-sm font-medium w-2/5 truncate" style={{ color: 'var(--foreground)' }}>{pair.term}</span>
-                          <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>→</span>
-                          <select
-                            value={selectedDef || ''}
-                            onChange={e => setMatchAnswer(qi, pair.term, e.target.value)}
-                            disabled={submitted}
-                            className="flex-1 px-3 py-2 rounded-lg border text-sm outline-none transition-all"
-                            style={{
-                              background: isCorrectMatch ? 'rgba(34,197,94,0.1)' : isWrongMatch ? 'rgba(229,77,46,0.1)' : 'var(--background)',
-                              borderColor: isCorrectMatch ? 'rgba(34,197,94,0.4)' : isWrongMatch ? 'rgba(229,77,46,0.4)' : 'var(--border)',
-                              color: 'var(--foreground)',
-                            }}
-                          >
-                            <option value="">Select…</option>
-                            {defs.map((def, di) => <option key={di} value={def}>{def}</option>)}
-                          </select>
+                {qType === 'matching' && q.pairs && (() => {
+                  // Compute stable shuffled defs for this specific question
+                  const defs = getOrCreateShuffledDefs(qi, q.pairs)
+                  return (
+                    <div className="space-y-3">
+                      {q.pairs.map((pair, pi) => {
+                        const selectedDef = (matchingAnswers[qi] || {})[pair.term] || ''
+                        const isCorrectMatch = submitted && selectedDef === pair.definition
+                        const isWrongMatch = submitted && !!selectedDef && selectedDef !== pair.definition
+                        return (
+                          <div key={pi} className="flex items-center gap-3">
+                            <span className="text-sm font-medium w-2/5" style={{ color: 'var(--foreground)' }}>{pair.term}</span>
+                            <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>→</span>
+                            <select
+                              value={selectedDef}
+                              onChange={e => setMatchAnswer(qi, pair.term, e.target.value)}
+                              disabled={submitted}
+                              className="flex-1 px-3 py-2 rounded-lg border text-sm outline-none transition-all"
+                              style={{
+                                background: isCorrectMatch
+                                  ? 'rgba(34,197,94,0.1)'
+                                  : isWrongMatch
+                                  ? 'rgba(229,77,46,0.1)'
+                                  : 'var(--background)',
+                                borderColor: isCorrectMatch
+                                  ? 'rgba(34,197,94,0.4)'
+                                  : isWrongMatch
+                                  ? 'rgba(229,77,46,0.4)'
+                                  : 'var(--border)',
+                                color: 'var(--foreground)',
+                              }}
+                            >
+                              <option value="">Select…</option>
+                              {defs.map((def, di) => (
+                                <option key={di} value={def}>{def}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )
+                      })}
+                      {submitted && (
+                        <div className="mt-2 pt-2 border-t space-y-1" style={{ borderColor: 'var(--border)' }}>
+                          <p className="text-xs font-semibold mb-1" style={{ color: 'var(--muted-foreground)' }}>Answer key:</p>
+                          {q.pairs.map((pair, pi) => (
+                            <p key={pi} className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                              <span className="font-semibold">{pair.term}</span> → {pair.definition}
+                            </p>
+                          ))}
                         </div>
-                      )
-                    })}
-                    {submitted && (
-                      <div className="mt-2 pt-2 border-t space-y-1" style={{ borderColor: 'var(--border)' }}>
-                        <p className="text-xs font-semibold mb-1" style={{ color: 'var(--muted-foreground)' }}>Answer key:</p>
-                        {q.pairs.map((pair, pi) => (
-                          <p key={pi} className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-                            <span className="font-semibold">{pair.term}</span> → {pair.definition}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  )
+                })()}
 
                 {/* SHORT ANSWER */}
                 {qType === 'short_answer' && (
